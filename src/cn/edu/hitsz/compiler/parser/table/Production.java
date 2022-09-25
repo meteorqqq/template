@@ -23,7 +23,7 @@ public record Production(int index, NonTerminal head, List<Term> body) {
     @Override
     public boolean equals(Object obj) {
         return obj instanceof Production production
-            && production.index == index;
+                && production.index == index;
     }
 
     @Override

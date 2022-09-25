@@ -4,6 +4,9 @@ package cn.edu.hitsz.compiler.symtab;
  * 符号表条目
  */
 public class SymbolTableEntry {
+    private final String text;
+    private SourceCodeType type;
+
     /**
      * @param text 符号的文本表示. 对于标识符符号, 该参数应该为标识符文本.
      */
@@ -39,7 +42,4 @@ public class SymbolTableEntry {
 
         this.type = type;
     }
-
-    private final String text;
-    private SourceCodeType type;
 }

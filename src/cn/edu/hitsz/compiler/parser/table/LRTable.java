@@ -12,6 +12,16 @@ import java.util.stream.Collectors;
  * <br>
  */
 public class LRTable {
+    private final List<Status> statusInIndexOrder;
+    private final List<TokenKind> terminals;
+    private final List<NonTerminal> nonTerminals;
+
+    LRTable(List<Status> statusInIndexOrder, List<TokenKind> terminals, List<NonTerminal> nonTerminals) {
+        this.statusInIndexOrder = statusInIndexOrder;
+        this.terminals = terminals;
+        this.nonTerminals = nonTerminals;
+    }
+
     /**
      * 根据当前状态与当前词法单元获取对应动作
      *
@@ -46,23 +56,23 @@ public class LRTable {
         final var text = new StringBuilder();
         // table head
         text.append("Status,ACTION").append(",".repeat(terminals.size()))
-            // GOTO 占了第一个 nonTerminal 的位置, 所以要 -1
-            .append("GOTO").append(",".repeat(nonTerminals.size() - 1))
-            .append("\n");
+                // GOTO 占了第一个 nonTerminal 的位置, 所以要 -1
+                .append("GOTO").append(",".repeat(nonTerminals.size() - 1))
+                .append("\n");
 
         text.append(",")
-            .append(terminals.stream().map(Term::toString).collect(Collectors.joining(",")))
-            .append(",")
-            .append(nonTerminals.stream().map(Term::toString).collect(Collectors.joining(",")))
-            .append("\n");
+                .append(terminals.stream().map(Term::toString).collect(Collectors.joining(",")))
+                .append(",")
+                .append(nonTerminals.stream().map(Term::toString).collect(Collectors.joining(",")))
+                .append("\n");
 
         for (final var status : statusInIndexOrder) {
             text.append(status)
-                .append(",")
-                .append(terminals.stream().map(status::getAction).map(Action::toString).collect(Collectors.joining(",")))
-                .append(",")
-                .append(nonTerminals.stream().map(status::getGoto).map(this::convertToGotoString).collect(Collectors.joining(",")))
-                .append("\n");
+                    .append(",")
+                    .append(terminals.stream().map(status::getAction).map(Action::toString).collect(Collectors.joining(",")))
+                    .append(",")
+                    .append(nonTerminals.stream().map(status::getGoto).map(this::convertToGotoString).collect(Collectors.joining(",")))
+                    .append("\n");
         }
 
         FileUtils.writeFile(path, text.toString());
@@ -75,14 +85,4 @@ public class LRTable {
             return status.toString();
         }
     }
-
-    LRTable(List<Status> statusInIndexOrder, List<TokenKind> terminals, List<NonTerminal> nonTerminals) {
-        this.statusInIndexOrder = statusInIndexOrder;
-        this.terminals = terminals;
-        this.nonTerminals = nonTerminals;
-    }
-
-    private final List<Status> statusInIndexOrder;
-    private final List<TokenKind> terminals;
-    private final List<NonTerminal> nonTerminals;
 }

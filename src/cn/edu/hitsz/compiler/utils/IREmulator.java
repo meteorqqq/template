@@ -14,6 +14,16 @@ import java.util.Optional;
  * 用来模拟执行 IR 的类
  */
 public class IREmulator {
+    private final List<Instruction> instructions;
+    private final Map<IRVariable, Integer> environment;
+    private Integer returnValue;
+
+    private IREmulator(List<Instruction> instructions) {
+        this.instructions = instructions;
+        this.environment = new HashMap<>();
+        this.returnValue = null;
+    }
+
     public static IREmulator load(List<Instruction> instructions) {
         return new IREmulator(instructions);
     }
@@ -62,14 +72,4 @@ public class IREmulator {
             throw new RuntimeException("Unknown IR value type");
         }
     }
-
-    private IREmulator(List<Instruction> instructions) {
-        this.instructions = instructions;
-        this.environment = new HashMap<>();
-        this.returnValue = null;
-    }
-
-    private final List<Instruction> instructions;
-    private final Map<IRVariable, Integer> environment;
-    private Integer returnValue;
 }

@@ -27,6 +27,16 @@ import java.util.stream.Collectors;
  * 那不如直接怎么写死怎么来, 用枚举确定类型, 用 getter 包装不同类型的不同参数的访问, 用 createXXX 方法模拟子类构造函数.
  */
 public class Instruction {
+    private final InstructionKind kind;
+    private final IRVariable result;
+    private final List<IRValue> operands;
+
+    private Instruction(InstructionKind kind, IRVariable result, List<IRValue> operands) {
+        this.kind = kind;
+        this.result = result;
+        this.operands = operands;
+    }
+
     //============================== 不同种类 IR 的构造函数 ==============================
     public static Instruction createAdd(IRVariable result, IRValue lhs, IRValue rhs) {
         return new Instruction(InstructionKind.ADD, result, List.of(lhs, rhs));
@@ -47,7 +57,6 @@ public class Instruction {
     public static Instruction createRet(IRValue returnValue) {
         return new Instruction(InstructionKind.RET, null, List.of(returnValue));
     }
-
 
     //============================== 不同种类 IR 的参数 getter ==============================
     public InstructionKind getKind() {
@@ -79,7 +88,6 @@ public class Instruction {
         return operands.get(0);
     }
 
-
     //============================== 基础设施 ==============================
     @Override
     public String toString() {
@@ -93,25 +101,15 @@ public class Instruction {
         return Collections.unmodifiableList(operands);
     }
 
-    private Instruction(InstructionKind kind, IRVariable result, List<IRValue> operands) {
-        this.kind = kind;
-        this.result = result;
-        this.operands = operands;
-    }
-
-    private final InstructionKind kind;
-    private final IRVariable result;
-    private final List<IRValue> operands;
-
     private void ensureKindMatch(Set<InstructionKind> targetKinds) {
         final var kind = getKind();
         if (!targetKinds.contains(kind)) {
             final var acceptKindsString = targetKinds.stream()
-                .map(InstructionKind::toString)
-                .collect(Collectors.joining(","));
+                    .map(InstructionKind::toString)
+                    .collect(Collectors.joining(","));
 
             throw new RuntimeException(
-                "Illegal operand access, except %s, but given %s".formatted(acceptKindsString, kind));
+                    "Illegal operand access, except %s, but given %s".formatted(acceptKindsString, kind));
         }
     }
 }

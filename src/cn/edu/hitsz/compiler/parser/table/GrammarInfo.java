@@ -12,14 +12,12 @@ import java.util.*;
  * 你不应该修改此文件
  */
 public class GrammarInfo {
+    // 为了防止有人看不懂, 就不用枚举定义单例了
+    // 顺手写个懒加载
+    private static GrammarInfo instance = null;
     private final Map<String, NonTerminal> nonTerminals = new HashMap<>();
     private final Map<String, Production> productions = new HashMap<>();
     private final List<Production> productionsInOrder = new ArrayList<>();
-
-    private NonTerminal getOrCreateNonTerminal(String name) {
-        nonTerminals.computeIfAbsent(name, NonTerminal::new);
-        return nonTerminals.get(name);
-    }
 
     private GrammarInfo() {
         final var lines = FileUtils.readLines(FilePathConfig.GRAMMAR_PATH);
@@ -49,10 +47,6 @@ public class GrammarInfo {
             productions.put(withoutComma, production);
         }
     }
-
-    // 为了防止有人看不懂, 就不用枚举定义单例了
-    // 顺手写个懒加载
-    private static GrammarInfo instance = null;
 
     private static GrammarInfo getInstance() {
         if (instance == null) {
@@ -94,5 +88,10 @@ public class GrammarInfo {
 
     public static List<Production> getProductionsInOrder() {
         return Collections.unmodifiableList(getInstance().productionsInOrder);
+    }
+
+    private NonTerminal getOrCreateNonTerminal(String name) {
+        nonTerminals.computeIfAbsent(name, NonTerminal::new);
+        return nonTerminals.get(name);
     }
 }

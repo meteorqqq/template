@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 from itertools import zip_longest
 import sys
 

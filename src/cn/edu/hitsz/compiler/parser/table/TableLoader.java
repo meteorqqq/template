@@ -12,6 +12,9 @@ import java.util.Map;
  * 读取 "编译工作台" 生成的语法分析表并将其转换为 LRTable 结构, 你不应该修改此文件
  */
 public class TableLoader {
+    private final List<Status> statusInIndexOrder = new ArrayList<>();
+    private final Map<Integer, Status> statuses = new HashMap<>();
+
     /**
      * 读取分析表
      *
@@ -33,11 +36,11 @@ public class TableLoader {
         // 符号行是存放终结符与非终结符的部分
         final var symbolHeader = csv.get(1);
         final var terminals = symbolHeader
-            .subList(actionColumnBegin, actionColumnEnd).stream()
-            .map(TokenKind::fromString).toList();
+                .subList(actionColumnBegin, actionColumnEnd).stream()
+                .map(TokenKind::fromString).toList();
         final var nonTerminals = symbolHeader
-            .subList(gotoColumnBegin, gotoColumnEnd).stream()
-            .map(NonTerminal::new).toList();
+                .subList(gotoColumnBegin, gotoColumnEnd).stream()
+                .map(NonTerminal::new).toList();
 
         // 再往下便是表的主体部分
         final var statusRows = csv.subList(2, csv.size());
@@ -78,9 +81,6 @@ public class TableLoader {
         // 返回构造出的 LR 表
         return new LRTable(statusInIndexOrder, terminals, nonTerminals);
     }
-
-    private final List<Status> statusInIndexOrder = new ArrayList<>();
-    private final Map<Integer, Status> statuses = new HashMap<>();
 
     /**
      * 解析 ACTION 表的字符串

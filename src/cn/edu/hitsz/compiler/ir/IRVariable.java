@@ -9,6 +9,13 @@ package cn.edu.hitsz.compiler.ir;
  * IR 变量的等价性由 name 唯一确定.
  */
 public class IRVariable implements IRValue {
+    private static int count = 0;
+    private final String name;
+
+    private IRVariable(String name) {
+        this.name = name;
+    }
+
     /**
      * @param name 源语言中变量的名字
      * @return 一个对应于源语言中具体变量的 IRVariable
@@ -50,11 +57,4 @@ public class IRVariable implements IRValue {
     public int hashCode() {
         return name.hashCode();
     }
-
-    private IRVariable(String name) {
-        this.name = name;
-    }
-
-    private final String name;
-    private static int count = 0;
 }

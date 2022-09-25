@@ -4,6 +4,12 @@ package cn.edu.hitsz.compiler.ir;
  * IR 中的立即数
  */
 public class IRImmediate implements IRValue {
+    private final int value;
+
+    private IRImmediate(int value) {
+        this.value = value;
+    }
+
     public static IRImmediate of(int value) {
         return new IRImmediate(value);
     }
@@ -12,14 +18,8 @@ public class IRImmediate implements IRValue {
         return value;
     }
 
-    private final int value;
-
     @Override
     public String toString() {
         return Integer.toString(value);
-    }
-
-    private IRImmediate(int value) {
-        this.value = value;
     }
 }

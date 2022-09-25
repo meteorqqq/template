@@ -6,7 +6,17 @@ import java.util.Objects;
  * 代表 LR 分析表 action 表中的一个动作, 你不应该修改此文件
  */
 public class Action {
-    public enum ActionKind {Reduce, Shift, Accept, Error}
+    private static final Action acceptInstance = new Action(ActionKind.Accept, null, null);
+    private static final Action errorInstance = new Action(ActionKind.Error, null, null);
+    private final ActionKind kind;
+    private final Production production;
+    private final Status status;
+
+    private Action(ActionKind kind, Production production, Status status) {
+        this.kind = kind;
+        this.production = production;
+        this.status = status;
+    }
 
     /**
      * @return 构造出的接受动作
@@ -81,8 +91,8 @@ public class Action {
     @Override
     public boolean equals(Object obj) {
         return obj instanceof Action action
-            && action.getKind().equals(kind)
-            && switch (kind) {
+                && action.getKind().equals(kind)
+                && switch (kind) {
             case Shift -> action.status.equals(status);
             case Reduce -> action.production.equals(production);
             case Accept, Error -> true;
@@ -94,16 +104,5 @@ public class Action {
         return Objects.hash(kind, status, production);
     }
 
-    private static final Action acceptInstance = new Action(ActionKind.Accept, null, null);
-    private static final Action errorInstance = new Action(ActionKind.Error, null, null);
-
-    private Action(ActionKind kind, Production production, Status status) {
-        this.kind = kind;
-        this.production = production;
-        this.status = status;
-    }
-
-    private final ActionKind kind;
-    private final Production production;
-    private final Status status;
+    public enum ActionKind {Reduce, Shift, Accept, Error}
 }

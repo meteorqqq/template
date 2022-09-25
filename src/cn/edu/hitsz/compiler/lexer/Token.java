@@ -14,6 +14,14 @@ package cn.edu.hitsz.compiler.lexer;
  * @see TokenKind 词法单元的类型, 其具有一定的复杂结构
  */
 public class Token {
+    private final TokenKind kind;
+    private final String text;
+
+    private Token(TokenKind kind, String text) {
+        this.kind = kind;
+        this.text = text;
+    }
+
     /**
      * @return 代表 EOF 的 token
      */
@@ -79,12 +87,4 @@ public class Token {
     public String toString() {
         return "(%s,%s)".formatted(kind, text);
     }
-
-    private Token(TokenKind kind, String text) {
-        this.kind = kind;
-        this.text = text;
-    }
-
-    private final TokenKind kind;
-    private final String text;
 }

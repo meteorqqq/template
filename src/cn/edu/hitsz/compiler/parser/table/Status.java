@@ -16,6 +16,12 @@ import java.util.Map;
  * @param goto_  在该状态下规约到非终结符后应该转移到哪个状态
  */
 public record Status(int index, Map<TokenKind, Action> action, Map<NonTerminal, Status> goto_) {
+    private static final Status errorInstance = new Status(-1);
+
+    private Status(int index) {
+        this(index, new HashMap<>(), new HashMap<>());
+    }
+
     /**
      * 构造一个状态
      *
@@ -37,6 +43,10 @@ public record Status(int index, Map<TokenKind, Action> action, Map<NonTerminal, 
         return errorInstance;
     }
 
+    private static <K, V> boolean inAndNotEqual(Map<K, V> map, K key, V newValue) {
+        return map.containsKey(key) && !newValue.equals(map.get(key));
+    }
+
     public boolean isError() {
         return this == errorInstance;
     }
@@ -49,13 +59,15 @@ public record Status(int index, Map<TokenKind, Action> action, Map<NonTerminal, 
     @Override
     public boolean equals(Object obj) {
         return obj instanceof Status status
-            && status.index == index;
+                && status.index == index;
     }
 
     @Override
     public int hashCode() {
         return index;
     }
+
+    //==================== 以下为实现相关代码 ==============================//
 
     /**
      * 当遇到该终结符 (Token 类型) 时, 应该转移到哪个状态
@@ -87,8 +99,6 @@ public record Status(int index, Map<TokenKind, Action> action, Map<NonTerminal, 
         return goto_.getOrDefault(nonTerminal, Status.error());
     }
 
-    //==================== 以下为实现相关代码 ==============================//
-
     void setAction(TokenKind terminal, Action action) {
         // 有可能 set 相同的 action, 这时候不能报错
         if (inAndNotEqual(this.action, terminal, action)) {
@@ -106,14 +116,4 @@ public record Status(int index, Map<TokenKind, Action> action, Map<NonTerminal, 
 
         this.goto_.put(nonTerminal, goto_);
     }
-
-    private static <K, V> boolean inAndNotEqual(Map<K, V> map, K key, V newValue) {
-        return map.containsKey(key) && !newValue.equals(map.get(key));
-    }
-
-    private Status(int index) {
-        this(index, new HashMap<>(), new HashMap<>());
-    }
-
-    private static final Status errorInstance = new Status(-1);
 }

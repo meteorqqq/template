@@ -12,6 +12,9 @@ import java.util.List;
  * 用于方便地做文件读写的工具
  */
 public final class FileUtils {
+    private FileUtils() {
+    }
+
     /**
      * 读取文本文件并以String形式返回文件内容
      *
@@ -71,14 +74,11 @@ public final class FileUtils {
 
     public static List<List<String>> readCSV(String path) {
         return readLines(path).stream()
-            // 当 limit 是 0 (调用无 limit 参数版本的 split 时就是这种情况) 时
-            // split 会忽略尾部的空白字符串, 而当 limit=-1 时不会忽略
-            // 这对 csv 是关键的, 因为 csv 里每行经常会有空白的末尾单元格
-            .map(line -> line.split(",", -1))
-            .map(Arrays::asList)
-            .toList();
-    }
-
-    private FileUtils() {
+                // 当 limit 是 0 (调用无 limit 参数版本的 split 时就是这种情况) 时
+                // split 会忽略尾部的空白字符串, 而当 limit=-1 时不会忽略
+                // 这对 csv 是关键的, 因为 csv 里每行经常会有空白的末尾单元格
+                .map(line -> line.split(",", -1))
+                .map(Arrays::asList)
+                .toList();
     }
 }

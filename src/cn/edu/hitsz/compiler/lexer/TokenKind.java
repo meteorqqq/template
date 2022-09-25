@@ -29,6 +29,12 @@ public class TokenKind extends Term {
     // 允许用作 TokenKind 的 id 的字符串集合
     private static final Map<String, TokenKind> allowed = new HashMap<>();
     private static final TokenKind eof = new TokenKind("$", -1);
+    private final int code;
+
+    private TokenKind(String id, int code) {
+        super(id);
+        this.code = code;
+    }
 
     /**
      * 从码点文件中读取允许的标识符集合
@@ -106,11 +112,4 @@ public class TokenKind extends Term {
     public int getCode() {
         return code;
     }
-
-    private TokenKind(String id, int code) {
-        super(id);
-        this.code = code;
-    }
-
-    private final int code;
 }

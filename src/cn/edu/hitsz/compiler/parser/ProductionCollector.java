@@ -16,12 +16,12 @@ import java.util.List;
  * 该类的输出结果会被作为判断实验二代码正误的根据.
  */
 public class ProductionCollector implements ActionObserver {
+    private final Production beginProduction;
+    private final List<Production> reducedProductions = new ArrayList<>();
+
     public ProductionCollector(Production beginProduction) {
         this.beginProduction = beginProduction;
     }
-
-    private final Production beginProduction;
-    private final List<Production> reducedProductions = new ArrayList<>();
 
     /**
      * 将结果输出到文件

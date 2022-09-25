@@ -13,6 +13,16 @@ import java.util.stream.Stream;
  * 此文件为非必需的框架文件, 用于提升整个编译器处理流程的统一性以及为学生提供 SLR(1) 分析表生成程序的参考. 正常情况下你不需要了解该文件.
  */
 public class TableGenerator {
+    private final List<Production> productions;
+    private final Set<TokenKind> terminals;
+    private final Set<NonTerminal> nonTerminals;
+    private final Map<Term, Set<TokenKind>> first = new HashMap<>();
+    private final Map<Term, Set<TokenKind>> follow = new HashMap<>();
+    private final Set<Term> visited = new HashSet<>();
+    private final Map<Set<Item>, Status> belongTo = new HashMap<>();
+    private final Map<Status, Set<Item>> including = new HashMap<>();
+    private final List<Status> allStatusInIndexOrder = new ArrayList<>();
+
     public TableGenerator() {
         this.productions = GrammarInfo.getProductionsInOrder();
         this.terminals = new HashSet<>(TokenKind.allAllowedTokenKinds().values());
@@ -55,15 +65,6 @@ public class TableGenerator {
     public LRTable getTable() {
         return new LRTable(allStatusInIndexOrder, new ArrayList<>(terminals), new ArrayList<>(nonTerminals));
     }
-
-    private final List<Production> productions;
-    private final Set<TokenKind> terminals;
-    private final Set<NonTerminal> nonTerminals;
-
-    private final Map<Term, Set<TokenKind>> first = new HashMap<>();
-    private final Map<Term, Set<TokenKind>> follow = new HashMap<>();
-
-    private final Set<Term> visited = new HashSet<>();
 
     /**
      * 计算所有符号的 first 集合 <br>
@@ -112,7 +113,6 @@ public class TableGenerator {
         return result;
     }
 
-
     /**
      * 计算所有非终结符的 follow 集合
      */
@@ -125,8 +125,8 @@ public class TableGenerator {
         // 对于找完所有产生式了都还没没有 follow 的非终结符
         // 它必然是一个没有被使用的非终结符, 这意味着它的 follow 就是 EOF
         nonTerminals.stream()
-            .map(follow::get).filter(Set::isEmpty)
-            .forEach(set -> set.add(TokenKind.eof()));
+                .map(follow::get).filter(Set::isEmpty)
+                .forEach(set -> set.add(TokenKind.eof()));
     }
 
     /**
@@ -178,72 +178,6 @@ public class TableGenerator {
     }
 
     /**
-     * 表示一个项目
-     * <br>
-     * 对于 A -> B . C, 其 production 为 A -> B C, dot 为 1 (其下一个项 C 的索引) <br>
-     * 对于 A -> B C ., 其 production 为 A -> B C, dot 为 2 (其产生式体的项数量) <br>
-     *
-     * @param production 产生式
-     * @param dot        目前解析到的位置
-     */
-    private record Item(Production production, int dot) {
-        /**
-         * @return 点的位置是否在产生式的末尾
-         */
-        public boolean isDotAtEnd() {
-            return production.body().size() == dot;
-        }
-
-        /**
-         * @return 获得点后面的文法符号; 若点的位置在末尾则返回空
-         */
-        public Optional<Term> getAfterDot() {
-            if (isDotAtEnd()) {
-                return Optional.empty();
-            } else {
-                return Optional.of(production.body().get(dot));
-            }
-        }
-
-        /**
-         * @return 获得当前项目的后继项; 若点的位置在末尾则返回空
-         */
-        public Optional<Item> getNextItem() {
-            if (isDotAtEnd()) {
-                return Optional.empty();
-            } else {
-                return Optional.of(new Item(production, dot + 1));
-            }
-        }
-
-        @Override
-        public String toString() {
-            final var builder = new StringBuilder();
-
-            builder.append(production.head());
-            builder.append(" -> ");
-
-            final var body = production.body();
-            for (int i = 0; i < body.size(); i++) {
-                if (i == dot) {
-                    builder.append(" .");
-                }
-                builder.append(" ").append(body.get(i));
-            }
-
-            if (dot == body.size()) {
-                builder.append(" .");
-            }
-
-            return builder.toString();
-        }
-    }
-
-    private final Map<Set<Item>, Status> belongTo = new HashMap<>();
-    private final Map<Status, Set<Item>> including = new HashMap<>();
-    private final List<Status> allStatusInIndexOrder = new ArrayList<>();
-
-    /**
      * 构造出所有状态并维护状态与项集之间的对应关系
      */
     private void constructDFA() {
@@ -286,15 +220,15 @@ public class TableGenerator {
             final var top = unexpanded.pollFirst();
             // 获得当前项中点后面的符号
             top.getAfterDot().ifPresent(afterDot ->
-                // 随后查找以该符号作为头部的产生式
-                getProductionsByHead(afterDot)
-                    // 构造点在对应产生式开头的新项
-                    .map(production -> new Item(production, 0))
-                    // 对于不在 result 中的新项
-                    .filter(item -> !result.contains(item))
-                    // 加入队列并加入结果中
-                    .peek(unexpanded::add)
-                    .forEach(result::add));
+                    // 随后查找以该符号作为头部的产生式
+                    getProductionsByHead(afterDot)
+                            // 构造点在对应产生式开头的新项
+                            .map(production -> new Item(production, 0))
+                            // 对于不在 result 中的新项
+                            .filter(item -> !result.contains(item))
+                            // 加入队列并加入结果中
+                            .peek(unexpanded::add)
+                            .forEach(result::add));
         }
 
         return result;
@@ -309,12 +243,12 @@ public class TableGenerator {
      */
     private Set<Item> constructGoto(Set<Item> items, Term term) {
         final var kernelForGoto = items.stream()
-            // 先筛选出 I 中所有点后面是 term 的项
-            .filter(item -> item.getAfterDot().map(term::equals).orElse(false))
-            // 然后分别求出每一个项的后继项
-            // 这个项集就是后继项目集的核
-            .map(Item::getNextItem).flatMap(Optional::stream)
-            .collect(Collectors.toSet());
+                // 先筛选出 I 中所有点后面是 term 的项
+                .filter(item -> item.getAfterDot().map(term::equals).orElse(false))
+                // 然后分别求出每一个项的后继项
+                // 这个项集就是后继项目集的核
+                .map(Item::getNextItem).flatMap(Optional::stream)
+                .collect(Collectors.toSet());
 
         // 随后从后继项目集的核中构造闭包即可得到后继项目集
         return constructClosure(kernelForGoto);
@@ -402,6 +336,68 @@ public class TableGenerator {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * 表示一个项目
+     * <br>
+     * 对于 A -> B . C, 其 production 为 A -> B C, dot 为 1 (其下一个项 C 的索引) <br>
+     * 对于 A -> B C ., 其 production 为 A -> B C, dot 为 2 (其产生式体的项数量) <br>
+     *
+     * @param production 产生式
+     * @param dot        目前解析到的位置
+     */
+    private record Item(Production production, int dot) {
+        /**
+         * @return 点的位置是否在产生式的末尾
+         */
+        public boolean isDotAtEnd() {
+            return production.body().size() == dot;
+        }
+
+        /**
+         * @return 获得点后面的文法符号; 若点的位置在末尾则返回空
+         */
+        public Optional<Term> getAfterDot() {
+            if (isDotAtEnd()) {
+                return Optional.empty();
+            } else {
+                return Optional.of(production.body().get(dot));
+            }
+        }
+
+        /**
+         * @return 获得当前项目的后继项; 若点的位置在末尾则返回空
+         */
+        public Optional<Item> getNextItem() {
+            if (isDotAtEnd()) {
+                return Optional.empty();
+            } else {
+                return Optional.of(new Item(production, dot + 1));
+            }
+        }
+
+        @Override
+        public String toString() {
+            final var builder = new StringBuilder();
+
+            builder.append(production.head());
+            builder.append(" -> ");
+
+            final var body = production.body();
+            for (int i = 0; i < body.size(); i++) {
+                if (i == dot) {
+                    builder.append(" .");
+                }
+                builder.append(" ").append(body.get(i));
+            }
+
+            if (dot == body.size()) {
+                builder.append(" .");
+            }
+
+            return builder.toString();
         }
     }
 
