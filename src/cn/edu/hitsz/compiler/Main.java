@@ -62,7 +62,9 @@ public class Main {
 
         // 各 Observer 输出结果
         productionCollector.dumpToFile(FilePathConfig.PARSER_PATH);
-        symbolTable.dumpTable(FilePathConfig.NEW_SYMBOL_TABLE);
+
+        // 仅生成OLD_SYMBOL_TABLE
+        // symbolTable.dumpTable(FilePathConfig.NEW_SYMBOL_TABLE);
         final var instructions = irGenerator.getIR();
         irGenerator.dumpIR(FilePathConfig.INTERMEDIATE_CODE_PATH);
 
