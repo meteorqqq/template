@@ -1,6 +1,5 @@
 package cn.edu.hitsz.compiler.parser;
 
-import cn.edu.hitsz.compiler.NotImplementedException;
 import cn.edu.hitsz.compiler.lexer.Token;
 import cn.edu.hitsz.compiler.lexer.TokenKind;
 import cn.edu.hitsz.compiler.parser.table.LRTable;
@@ -79,7 +78,7 @@ public class SyntaxAnalyzer {
 
     public void loadTokens(Iterable<Token> tokens) {
         // 使用list存储
-        for (final var token:tokens){
+        for (final var token : tokens) {
             tokenList.add(token);
         }
     }
@@ -92,11 +91,11 @@ public class SyntaxAnalyzer {
         // 你需要根据上面的输入来实现 LR 语法分析的驱动程序
         // 请分别在遇到 Shift, Reduce, Accept 的时候调用上面的 callWhenInShift, callWhenInReduce, callWhenInAccept
         // 否则用于为实验二打分的产生式输出可能不会正常工作
-        class StateToken{
+        class StateToken {
             public final Status status;
             public final Term term;
 
-            public StateToken(Status status,Term term){
+            public StateToken(Status status, Term term) {
                 this.status = status;
                 this.term = term;
             }
@@ -105,10 +104,10 @@ public class SyntaxAnalyzer {
         Stack<StateToken> stateTokens = new Stack<>();
         //初始化
         stateTokens.add(new StateToken(lrTable.getInit(), TokenKind.eof()));
-        for (int i = 0;i < tokenList.size();){
+        for (int i = 0; i < tokenList.size(); ) {
             var token = tokenList.get(i);
             var action = lrTable.getAction(stateTokens.peek().status, token);
-            switch (action.getKind()){
+            switch (action.getKind()) {
                 case Accept -> {
                     callWhenInAccept(stateTokens.peek().status);
                     return;
@@ -120,7 +119,7 @@ public class SyntaxAnalyzer {
                 }
                 case Reduce -> {
                     var production = action.getProduction();
-                    for (int j = 0; j < production.body().size(); j++){
+                    for (int j = 0; j < production.body().size(); j++) {
                         stateTokens.pop();
                     }
                     callWhenInReduce(stateTokens.peek().status, production);

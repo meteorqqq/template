@@ -133,7 +133,7 @@ public class LexicalAnalyzer {
     public void dumpTokens(String path) {
         FileUtils.writeLines(
                 path,
-                StreamSupport.stream(getTokens().spliterator(),false).map(Token::toString).toList()
+                StreamSupport.stream(getTokens().spliterator(), false).map(Token::toString).toList()
         );
     }
 
