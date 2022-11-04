@@ -1,6 +1,5 @@
 package cn.edu.hitsz.compiler.asm;
 
-import cn.edu.hitsz.compiler.NotImplementedException;
 import cn.edu.hitsz.compiler.ir.IRImmediate;
 import cn.edu.hitsz.compiler.ir.IRVariable;
 import cn.edu.hitsz.compiler.ir.Instruction;
@@ -27,9 +26,9 @@ import java.util.Map;
  */
 public class AssemblyGenerator {
     private static final int regNum = 7;
-    private List<Instruction> originInstructions = new ArrayList<>();
     private final List<String> assembly = new ArrayList<>();
     private final Map<Integer, IRVariable> regIRMap = new HashMap<>();
+    private List<Instruction> originInstructions = new ArrayList<>();
 
     /**
      * 加载前端提供的中间代码
@@ -110,12 +109,12 @@ public class AssemblyGenerator {
                         regRes = getReg(instruction.getResult());
                         if (isLHSImm) {
                             regL = getReg((IRVariable) instruction.getRHS());
-                            assembly.add("    addi t" + regRes + ", t" + regL + ", " + ((IRImmediate)instruction.getLHS()).getValue());
-                        }else {
+                            assembly.add("    addi t" + regRes + ", t" + regL + ", " + ((IRImmediate) instruction.getLHS()).getValue());
+                        } else {
                             regL = getReg((IRVariable) instruction.getLHS());
-                            assembly.add("    addi t" + regRes + ", t" + regL + ", " + ((IRImmediate)instruction.getRHS()).getValue());
+                            assembly.add("    addi t" + regRes + ", t" + regL + ", " + ((IRImmediate) instruction.getRHS()).getValue());
                         }
-                    }else {
+                    } else {
                         regRes = getReg(instruction.getResult());
                         regL = getReg((IRVariable) instruction.getLHS());
                         regR = getReg((IRVariable) instruction.getRHS());
@@ -135,12 +134,12 @@ public class AssemblyGenerator {
                             regR = getReg((IRVariable) instruction.getRHS());
                             assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getLHS()).getValue());
                             assembly.add("    sub t" + regRes + ", t" + regTemp + ", t" + regR);
-                        }else {
+                        } else {
                             regL = getReg((IRVariable) instruction.getLHS());
                             assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getRHS()).getValue());
                             assembly.add("    sub t" + regRes + ", t" + regL + ", t" + regTemp);
                         }
-                    }else {
+                    } else {
                         regRes = getReg(instruction.getResult());
                         regL = getReg((IRVariable) instruction.getLHS());
                         regR = getReg((IRVariable) instruction.getRHS());
@@ -160,12 +159,12 @@ public class AssemblyGenerator {
                             regR = getReg((IRVariable) instruction.getRHS());
                             assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getLHS()).getValue());
                             assembly.add("    mul t" + regRes + ", t" + regTemp + ", t" + regR);
-                        }else {
+                        } else {
                             regL = getReg((IRVariable) instruction.getLHS());
                             assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getRHS()).getValue());
                             assembly.add("    mul t" + regRes + ", t" + regL + ", t" + regTemp);
                         }
-                    }else {
+                    } else {
                         regRes = getReg(instruction.getResult());
                         regL = getReg((IRVariable) instruction.getLHS());
                         regR = getReg((IRVariable) instruction.getRHS());
