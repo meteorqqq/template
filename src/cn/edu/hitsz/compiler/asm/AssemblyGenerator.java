@@ -1,13 +1,18 @@
 package cn.edu.hitsz.compiler.asm;
 
 import cn.edu.hitsz.compiler.NotImplementedException;
+import cn.edu.hitsz.compiler.ir.IRImmediate;
+import cn.edu.hitsz.compiler.ir.IRVariable;
 import cn.edu.hitsz.compiler.ir.Instruction;
+import cn.edu.hitsz.compiler.utils.FileUtils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
- * TODO: 实验四: 实现汇编生成
  * <br>
  * 在编译器的整体框架中, 代码生成可以称作后端, 而前面的所有工作都可称为前端.
  * <br>
@@ -21,6 +26,10 @@ import java.util.List;
  * @see AssemblyGenerator#run() 代码生成与寄存器分配
  */
 public class AssemblyGenerator {
+    private static final int regNum = 7;
+    private List<Instruction> originInstructions = new ArrayList<>();
+    private final List<String> assembly = new ArrayList<>();
+    private final Map<Integer, IRVariable> regIRMap = new HashMap<>();
 
     /**
      * 加载前端提供的中间代码
@@ -31,10 +40,36 @@ public class AssemblyGenerator {
      * @param originInstructions 前端提供的中间代码
      */
     public void loadIR(List<Instruction> originInstructions) {
-        // TODO: 读入前端提供的中间代码并生成所需要的信息
-        throw new NotImplementedException();
+        this.originInstructions = originInstructions;
     }
 
+    /*
+     *  寄存器查找算法，寻找IRVariable对应寄存器
+     *  HashMap大小为2的幂次，用循环限制大小
+     */
+    public int getReg(IRVariable irVariable) throws RuntimeException {
+        if (regIRMap.containsValue(irVariable)) {
+            for (int getKey = 0; getKey < regNum; getKey++) {
+                if (regIRMap.get(getKey).equals(irVariable)) return getKey;
+            }
+        } else {
+            for (int getKey = 0; getKey < regNum; getKey++) {
+                if (!regIRMap.containsKey(getKey)) {
+                    regIRMap.put(getKey, irVariable);
+                    return getKey;
+                }
+            }
+            for (int getKey = 0; getKey < regNum; getKey++) { // 抢占
+                if (regIRMap.get(getKey).isTemp()) {
+                    regIRMap.remove(getKey);
+                    regIRMap.put(getKey, irVariable);
+                    return getKey;
+                }
+            }
+        }
+
+        throw new RuntimeException("Reg Error");
+    }
 
     /**
      * 执行代码生成.
@@ -46,10 +81,104 @@ public class AssemblyGenerator {
      * 成前完成建立, 与代码生成的过程相关的信息可自行设计数据结构进行记录并动态维护.
      */
     public void run() {
-        // TODO: 执行寄存器分配与代码生成
-        throw new NotImplementedException();
+        assembly.add(".text");
+        for (Instruction instruction : originInstructions) {
+            int regRes, regL, regR, regTemp;
+            switch (instruction.getKind()) {
+                case RET -> {
+                    regRes = getReg((IRVariable) instruction.getReturnValue());
+                    assembly.add("    mv a0, t" + regRes);
+                }
+                case MOV -> {
+                    boolean isImm = instruction.getFrom().isImmediate();
+                    if (isImm) {
+                        regRes = getReg(instruction.getResult());
+                        assembly.add("    li t" + regRes + ", " + ((IRImmediate) instruction.getFrom()).getValue());
+                    } else {
+                        regL = getReg((IRVariable) instruction.getFrom());
+                        regRes = getReg(instruction.getResult());
+                        assembly.add("    mv t" + regRes + ", t" + regL);
+                    }
+                }
+                case ADD -> {
+                    boolean isLHSImm = instruction.getLHS().isImmediate();
+                    boolean isRHSImm = instruction.getRHS().isImmediate();
+                    if (isLHSImm & isRHSImm) {
+                        regRes = getReg(instruction.getResult());
+                        assembly.add("    li t" + regRes + ", " + (((IRImmediate) instruction.getLHS()).getValue() + ((IRImmediate) instruction.getRHS()).getValue()));
+                    } else if (isLHSImm | isRHSImm) {
+                        regRes = getReg(instruction.getResult());
+                        if (isLHSImm) {
+                            regL = getReg((IRVariable) instruction.getRHS());
+                            assembly.add("    addi t" + regRes + ", t" + regL + ", " + ((IRImmediate)instruction.getLHS()).getValue());
+                        }else {
+                            regL = getReg((IRVariable) instruction.getLHS());
+                            assembly.add("    addi t" + regRes + ", t" + regL + ", " + ((IRImmediate)instruction.getRHS()).getValue());
+                        }
+                    }else {
+                        regRes = getReg(instruction.getResult());
+                        regL = getReg((IRVariable) instruction.getLHS());
+                        regR = getReg((IRVariable) instruction.getRHS());
+                        assembly.add("    add t" + regRes + ", t" + regL + ", t" + regR);
+                    }
+                }
+                case SUB -> {
+                    boolean isLHSImm = instruction.getLHS().isImmediate();
+                    boolean isRHSImm = instruction.getRHS().isImmediate();
+                    if (isLHSImm & isRHSImm) {
+                        regRes = getReg(instruction.getResult());
+                        assembly.add("    li t" + regRes + ", " + (((IRImmediate) instruction.getLHS()).getValue() - ((IRImmediate) instruction.getRHS()).getValue()));
+                    } else if (isLHSImm | isRHSImm) { //  新建缓存寄存器
+                        regRes = getReg(instruction.getResult());
+                        regTemp = getReg(IRVariable.temp());
+                        if (isLHSImm) {
+                            regR = getReg((IRVariable) instruction.getRHS());
+                            assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getLHS()).getValue());
+                            assembly.add("    sub t" + regRes + ", t" + regTemp + ", t" + regR);
+                        }else {
+                            regL = getReg((IRVariable) instruction.getLHS());
+                            assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getRHS()).getValue());
+                            assembly.add("    sub t" + regRes + ", t" + regL + ", t" + regTemp);
+                        }
+                    }else {
+                        regRes = getReg(instruction.getResult());
+                        regL = getReg((IRVariable) instruction.getLHS());
+                        regR = getReg((IRVariable) instruction.getRHS());
+                        assembly.add("    sub t" + regRes + ", t" + regL + ", t" + regR);
+                    }
+                }
+                case MUL -> {
+                    boolean isLHSImm = instruction.getLHS().isImmediate();
+                    boolean isRHSImm = instruction.getRHS().isImmediate();
+                    if (isLHSImm & isRHSImm) {
+                        regRes = getReg(instruction.getResult());
+                        assembly.add("    li t" + regRes + ", " + (((IRImmediate) instruction.getLHS()).getValue() * ((IRImmediate) instruction.getRHS()).getValue()));
+                    } else if (isLHSImm | isRHSImm) { //  新建缓存寄存器
+                        regRes = getReg(instruction.getResult());
+                        regTemp = getReg(IRVariable.temp());
+                        if (isLHSImm) {
+                            regR = getReg((IRVariable) instruction.getRHS());
+                            assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getLHS()).getValue());
+                            assembly.add("    mul t" + regRes + ", t" + regTemp + ", t" + regR);
+                        }else {
+                            regL = getReg((IRVariable) instruction.getLHS());
+                            assembly.add("    li t" + regTemp + ", " + ((IRImmediate) instruction.getRHS()).getValue());
+                            assembly.add("    mul t" + regRes + ", t" + regL + ", t" + regTemp);
+                        }
+                    }else {
+                        regRes = getReg(instruction.getResult());
+                        regL = getReg((IRVariable) instruction.getLHS());
+                        regR = getReg((IRVariable) instruction.getRHS());
+                        assembly.add("    mul t" + regRes + ", t" + regL + ", t" + regR);
+                    }
+                }
+            }
+        }
     }
 
+    public List<String> getASM() {
+        return assembly;
+    }
 
     /**
      * 输出汇编代码到文件
@@ -57,8 +186,7 @@ public class AssemblyGenerator {
      * @param path 输出文件路径
      */
     public void dump(String path) {
-        // TODO: 输出汇编代码到文件
-        throw new NotImplementedException();
+        FileUtils.writeLines(path, getASM().stream().map(String::toString).toList());
     }
 }
 
