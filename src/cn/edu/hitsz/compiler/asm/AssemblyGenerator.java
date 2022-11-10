@@ -5,10 +5,7 @@ import cn.edu.hitsz.compiler.ir.IRVariable;
 import cn.edu.hitsz.compiler.ir.Instruction;
 import cn.edu.hitsz.compiler.utils.FileUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -28,7 +25,9 @@ public class AssemblyGenerator {
     private static final int regNum = 7;
     private final List<String> assembly = new ArrayList<>();
     private final Map<Integer, IRVariable> regIRMap = new HashMap<>();
+    public int index = 0;
     private List<Instruction> originInstructions = new ArrayList<>();
+    private List<IRCount> irVariableList = new ArrayList<>();
 
     /**
      * 加载前端提供的中间代码
@@ -39,7 +38,80 @@ public class AssemblyGenerator {
      * @param originInstructions 前端提供的中间代码
      */
     public void loadIR(List<Instruction> originInstructions) {
+        int count = 0;
+        for (var instruction : originInstructions) {
+            switch (instruction.getKind()) {
+                case ADD -> {
+                    count++;
+                    boolean isLHSImm = instruction.getLHS().isImmediate();
+                    boolean isRHSImm = instruction.getRHS().isImmediate();
+                    if (isLHSImm | isRHSImm) {
+                        if (isLHSImm) {
+                            irVariableList.add(new IRCount((IRVariable) instruction.getRHS(), count));
+                            irVariableList.add(new IRCount(instruction.getResult(), count));
+                        } else {
+                            irVariableList.add(new IRCount((IRVariable) instruction.getLHS(), count));
+                            irVariableList.add(new IRCount(instruction.getResult(), count));
+                        }
+                    } else {
+                        irVariableList.add(new IRCount((IRVariable) instruction.getRHS(), count));
+                        irVariableList.add(new IRCount((IRVariable) instruction.getLHS(), count));
+                        irVariableList.add(new IRCount(instruction.getResult(), count));
+                    }
+                }
+                case MOV -> {
+                    count++;
+                    boolean isImm = instruction.getFrom().isImmediate();
+                    irVariableList.add(new IRCount(instruction.getResult(), count));
+                    if (!isImm) {
+                        irVariableList.add(new IRCount((IRVariable) instruction.getFrom(), count));
+                    }
+                }
+                case MUL, SUB -> {
+                    count++;
+                    boolean isLHSImm = instruction.getLHS().isImmediate();
+                    boolean isRHSImm = instruction.getRHS().isImmediate();
+                    if (isLHSImm | isRHSImm) {
+                        count++;
+                        if (isLHSImm) {
+                            irVariableList.add(new IRCount(IRVariable.temp(), count));
+                            irVariableList.add(new IRCount((IRVariable) instruction.getRHS(), count));
+                            irVariableList.add(new IRCount(instruction.getResult(), count));
+                        } else {
+                            irVariableList.add(new IRCount(IRVariable.temp(), count));
+                            irVariableList.add(new IRCount((IRVariable) instruction.getLHS(), count));
+                            irVariableList.add(new IRCount(instruction.getResult(), count));
+                        }
+                    } else {
+                        irVariableList.add(new IRCount((IRVariable) instruction.getRHS(), count));
+                        irVariableList.add(new IRCount((IRVariable) instruction.getLHS(), count));
+                        irVariableList.add(new IRCount(instruction.getResult(), count));
+                    }
+                }
+                case RET -> {
+                    count++;
+                    irVariableList.add(new IRCount((IRVariable) instruction.getReturnValue(), count));
+                }
+            }
+        }
         this.originInstructions = originInstructions;
+    }
+
+    public void minIRList(List<IRCount> irVariableList) {
+        List<IRVariable> irList = new ArrayList<>();
+        List<Integer> indexList = new ArrayList<>();
+        List<IRCount> minList = new ArrayList<>();
+        Collections.reverse(irVariableList);
+        for (var ir : irVariableList) {
+            if (!irList.contains(ir.irVariable)) {
+                irList.add(ir.irVariable);
+                indexList.add(ir.index);
+            }
+        }
+        for (int i = 0; i < irList.size(); i++) {
+            minList.add(new IRCount(irList.get(i), indexList.get(i)));
+        }
+        this.irVariableList = minList;
     }
 
     /*
@@ -47,6 +119,7 @@ public class AssemblyGenerator {
      *  HashMap大小为2的幂次，用循环限制大小
      */
     public int getReg(IRVariable irVariable) throws RuntimeException {
+        minIRList(irVariableList);
         if (regIRMap.containsValue(irVariable)) {
             for (int getKey = 0; getKey < regNum; getKey++) {
                 if (regIRMap.get(getKey).equals(irVariable)) return getKey;
@@ -58,11 +131,16 @@ public class AssemblyGenerator {
                     return getKey;
                 }
             }
-            for (int getKey = 0; getKey < regNum; getKey++) { // 抢占
-                if (regIRMap.get(getKey).isTemp()) {
-                    regIRMap.remove(getKey);
-                    regIRMap.put(getKey, irVariable);
-                    return getKey;
+            for (var ir : irVariableList) {
+                if (index > ir.index) {
+                    for (int getKey = 0; getKey < regNum; getKey++) {
+                        if (regIRMap.get(getKey).equals(ir.irVariable)) {
+                            regIRMap.remove(getKey, ir.irVariable);
+                            regIRMap.put(getKey, irVariable);
+                            irVariableList.remove(ir);
+                            return getKey;
+                        }
+                    }
                 }
             }
         }
@@ -85,10 +163,12 @@ public class AssemblyGenerator {
             int regRes, regL, regR, regTemp;
             switch (instruction.getKind()) {
                 case RET -> {
+                    index++;
                     regRes = getReg((IRVariable) instruction.getReturnValue());
                     assembly.add("    mv a0, t" + regRes);
                 }
                 case MOV -> {
+                    index++;
                     boolean isImm = instruction.getFrom().isImmediate();
                     if (isImm) {
                         regRes = getReg(instruction.getResult());
@@ -100,6 +180,7 @@ public class AssemblyGenerator {
                     }
                 }
                 case ADD -> {
+                    index++;
                     boolean isLHSImm = instruction.getLHS().isImmediate();
                     boolean isRHSImm = instruction.getRHS().isImmediate();
                     if (isLHSImm & isRHSImm) {
@@ -122,12 +203,14 @@ public class AssemblyGenerator {
                     }
                 }
                 case SUB -> {
+                    index++;
                     boolean isLHSImm = instruction.getLHS().isImmediate();
                     boolean isRHSImm = instruction.getRHS().isImmediate();
                     if (isLHSImm & isRHSImm) {
                         regRes = getReg(instruction.getResult());
                         assembly.add("    li t" + regRes + ", " + (((IRImmediate) instruction.getLHS()).getValue() - ((IRImmediate) instruction.getRHS()).getValue()));
                     } else if (isLHSImm | isRHSImm) { //  新建缓存寄存器
+                        index++;
                         regRes = getReg(instruction.getResult());
                         regTemp = getReg(IRVariable.temp());
                         if (isLHSImm) {
@@ -147,12 +230,14 @@ public class AssemblyGenerator {
                     }
                 }
                 case MUL -> {
+                    index++;
                     boolean isLHSImm = instruction.getLHS().isImmediate();
                     boolean isRHSImm = instruction.getRHS().isImmediate();
                     if (isLHSImm & isRHSImm) {
                         regRes = getReg(instruction.getResult());
                         assembly.add("    li t" + regRes + ", " + (((IRImmediate) instruction.getLHS()).getValue() * ((IRImmediate) instruction.getRHS()).getValue()));
                     } else if (isLHSImm | isRHSImm) { //  新建缓存寄存器
+                        index++;
                         regRes = getReg(instruction.getResult());
                         regTemp = getReg(IRVariable.temp());
                         if (isLHSImm) {
